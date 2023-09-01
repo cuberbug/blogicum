@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -70,6 +71,11 @@ class Post(PublishedModel):
     text = models.TextField(
         verbose_name='Текст',
     )
+    image = models.ImageField(
+        verbose_name='Фото',
+        upload_to='post_images',
+        blank=True,
+    )
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
         help_text=(
@@ -103,6 +109,41 @@ class Post(PublishedModel):
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         ordering = ('-pub_date', 'title')
+        constraints = (
+            models.UniqueConstraint(
+                fields=(
+                    'title', 'text', 'pub_date', 'location', 'category',
+                ),
+                name='Unique person constraint',
+            ),
+        )
+
+    def get_absolute_url(self) -> str:
+        return reverse('blog:post_detail', kwargs={'pk': self.pk})
 
     def __str__(self) -> str:
         return self.title
+
+
+class Comment(PublishedModel):
+    """Модель для комментариев."""
+    text = models.TextField(
+        verbose_name='Текст комментария',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='comments',
+    )
+
+    class Meta:
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ('-created_at',)
+
+    def __str__(self) -> str:
+        return self.text
