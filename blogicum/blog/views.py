@@ -112,6 +112,13 @@ class PostDetailView(PostMixin, DetailView):
             raise Http404
         return super().dispatch(request, *args, **kwargs)
 
+    def get_queryset(self) -> QuerySet[Any]:
+        return super().get_queryset().select_related(
+            'author',
+            'location',
+            'category',
+        )
+
     def get_context_data(self, **kwargs) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
