@@ -1,17 +1,16 @@
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.views.generic.base import TemplateView
 
 
-def about(request) -> HttpResponse:
+class AboutView(TemplateView):
     """Возвращает страницу с описанием проекта."""
-    template: str = 'pages/about.html'
-    return render(request, template)
+    template_name = 'pages/about.html'
 
 
-def rules(request) -> HttpResponse:
+class RulesView(TemplateView):
     """Возвращает страницу с правилами."""
-    template: str = 'pages/rules.html'
-    return render(request, template)
+    template_name = 'pages/rules.html'
 
 
 def csrf_failure(request, reason='') -> HttpResponse:
@@ -26,7 +25,7 @@ def page_not_found(request, exception) -> HttpResponse:
     return render(request, template, status=404)
 
 
-def server_error(request) -> HttpResponse:
+def server_error(request, reason='') -> HttpResponse:
     """Рендер страницы для 500 ошибки."""
     template: str = 'pages/500.html'
     return render(request, template, status=500)

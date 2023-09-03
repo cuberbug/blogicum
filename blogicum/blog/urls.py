@@ -66,7 +66,7 @@ urlpatterns += [
     ),
     path(
         'profile/<slug:username>/',
-        views.ProfileListView.as_view(),
+        views.ProfilePostListView.as_view(),
         name='profile',
     ),
 ]

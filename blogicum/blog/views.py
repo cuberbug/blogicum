@@ -1,7 +1,7 @@
 from typing import Any, Dict
-from django import http
 from django.db.models import Count
 from django.db.models.query import QuerySet
+from django.http import Http404
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -15,7 +15,10 @@ from .forms import PostForm, CommentForm
 from .models import Category, Comment, Post, User
 
 
-def get_general_posts_filter():
+PAGINATE_COUNT: int = 10
+
+
+def get_general_posts_filter() -> QuerySet[Any]:
     """Фильтр постов для пользователя."""
     return Post.objects.select_related(
         'author',
@@ -30,26 +33,13 @@ def get_general_posts_filter():
     ).order_by('-pub_date')
 
 
-def get_author_posts_filter():
-    """Фильтр постов для автора."""
-    return Post.objects.select_related(
-        'author',
-        'location',
-        'category',
-    ).annotate(
-        comment_count=Count('comments')
-    ).order_by('-pub_date')
-
-
 class EditContentMixin(LoginRequiredMixin):
     """
     Добавляет проверку авторства для редактирования и удаления.
     Если проверка провалена, то возвращает на страницу поста.
     """
 
-    def dispatch(
-        self, request: http.HttpRequest, *args: Any, **kwargs: Any
-    ) -> HttpResponse:
+    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
         if self.get_object().author != request.user:
             return redirect(
                 'blog:post_detail',
@@ -78,27 +68,50 @@ class RedirectionProfileMixin:
         )
 
 
-# class PostMixin:
-#     model = Post
-
-
-class PostListView(ListView):
-    """CBV главной страницы. Выводит список постов."""
+class PostMixin:
+    """Базовый миксин для постов."""
     model = Post
+
+
+class PostFormMixin(PostMixin):
+    """Миксин для постов с формой."""
+    form_class = PostForm
+
+
+class PostListMixin(PostMixin):
+    """Миксин для страниц со списком постов и пагинацией."""
+    paginate_by = PAGINATE_COUNT
+
+
+class PostListView(PostListMixin, ListView):
+    """CBV главной страницы. Выводит список постов."""
     template_name = 'blog/index.html'
-    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[Any]:
         return get_general_posts_filter()
 
 
-class PostDetailView(DetailView):
+class PostDetailView(PostMixin, DetailView):
     """CBV подробная страница поста с комментариями к нему."""
-    model = Post
     template_name = 'blog/detail.html'
     pk_url_kwarg = 'post_id'
 
-    def get_context_data(self, **kwargs):
+    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
+        """
+        Условия фильтрации, если пользователь не является автором поста:
+        - пост разрешён к публикации;
+        - категория разрешена к публикации;
+        - текущее время больше времени публикации.
+        """
+        if self.get_object().author != self.request.user and (
+            self.get_object().is_published is False or
+            self.get_object().category.is_published is False or
+            self.get_object().pub_date > timezone.now()
+        ):
+            raise Http404
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
         context['comments'] = self.object.comments.select_related(
@@ -107,18 +120,16 @@ class PostDetailView(DetailView):
         return context
 
 
-class CategoryListView(ListView):
+class CategoryListView(PostListMixin, ListView):
     """CBV страница категории. Выводит список постов."""
-    model = Post
     template_name = 'blog/category.html'
-    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[Any]:
         return get_general_posts_filter().filter(
             category__slug=self.kwargs['category_slug'],
         )
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['category'] = get_object_or_404(
             Category,
@@ -128,22 +139,28 @@ class CategoryListView(ListView):
         return context
 
 
-class PostCreateView(LoginRequiredMixin, RedirectionProfileMixin, CreateView):
+class PostCreateView(
+    LoginRequiredMixin,
+    PostFormMixin,
+    RedirectionProfileMixin,
+    CreateView,
+):
     """CBV страница создания поста."""
     template_name = 'blog/create.html'
-    model = Post
-    form_class = PostForm
 
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
 
 
-class PostUpdateView(EditContentMixin, RedirectionPostMixin, UpdateView):
+class PostUpdateView(
+    EditContentMixin,
+    PostFormMixin,
+    RedirectionPostMixin,
+    UpdateView,
+):
     """CBV страница редактирования поста."""
     template_name = 'blog/create.html'
-    model = Post
-    form_class = PostForm
     pk_url_kwarg = 'post_id'
 
     def form_valid(self, form):
@@ -151,32 +168,42 @@ class PostUpdateView(EditContentMixin, RedirectionPostMixin, UpdateView):
         return super().form_valid(form)
 
 
-class PostDeleteView(EditContentMixin, RedirectionProfileMixin, DeleteView):
+class PostDeleteView(
+    EditContentMixin,
+    PostMixin,
+    RedirectionProfileMixin,
+    DeleteView,
+):
     """CBV страница удаления поста."""
     template_name = 'blog/create.html'
-    model = Post
     pk_url_kwarg = 'post_id'
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['form'] = PostForm(instance=self.object)
         return context
 
 
-class ProfileListView(ListView):
+class ProfilePostListView(PostListMixin, ListView):
     """CBV страницы пользователя."""
-    model = Post
     template_name = 'blog/profile.html'
-    paginate_by = 10
 
     def get_queryset(self) -> QuerySet[Any]:
         self.author = get_object_or_404(
             User,
             username=self.kwargs['username']
         )
-        return get_general_posts_filter().filter(author=self.author)
+        return Post.objects.select_related(
+            'author',
+            'location',
+            'category',
+        ).filter(
+            author=self.author
+        ).annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['profile'] = self.author
         return context
