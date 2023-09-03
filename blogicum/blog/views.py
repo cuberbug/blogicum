@@ -1,4 +1,5 @@
 from typing import Any, Dict
+
 from django.db.models import Count
 from django.db.models.query import QuerySet
 from django.http import Http404
