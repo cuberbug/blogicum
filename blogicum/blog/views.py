@@ -104,10 +104,11 @@ class PostDetailView(PostMixin, DetailView):
         - категория разрешена к публикации;
         - текущее время больше времени публикации.
         """
-        if self.get_object().author != self.request.user and (
-            self.get_object().is_published is False or
-            self.get_object().category.is_published is False or
-            self.get_object().pub_date > timezone.now()
+        self.object = self.get_object()
+        if self.object.author != self.request.user and (
+            self.object.is_published is False
+            or self.object.category.is_published is False
+            or self.object.pub_date > timezone.now()
         ):
             raise Http404
         return super().dispatch(request, *args, **kwargs)
