@@ -30,7 +30,7 @@ def get_general_posts_filter() -> QuerySet[Any]:
         category__is_published=True,
     ).annotate(
         comment_count=Count('comments')
-    ).order_by('-pub_date')
+    )  # .order_by('-pub_date')
 
 
 class EditContentMixin(LoginRequiredMixin):
