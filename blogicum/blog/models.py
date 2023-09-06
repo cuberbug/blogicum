@@ -35,7 +35,7 @@ class Location(PublishedModel):
         verbose_name_plural = 'Местоположения'
 
     def __str__(self) -> str:
-        return self.name
+        return self.name[:25]
 
 
 class Category(PublishedModel):
@@ -60,7 +60,7 @@ class Category(PublishedModel):
         verbose_name_plural = 'Категории'
 
     def __str__(self) -> str:
-        return self.title
+        return f"{self.title[:25]} - {self.description[:50]}"
 
 
 class Post(PublishedModel):
@@ -108,21 +108,18 @@ class Post(PublishedModel):
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
-        ordering = ['-pub_date', 'title']
-        constraints = (
-            models.UniqueConstraint(
-                fields=(
-                    'title', 'text', 'pub_date', 'location', 'category',
-                ),
-                name='Unique person constraint',
-            ),
-        )
+        ordering = ('-pub_date', 'title',)
 
     def get_absolute_url(self) -> str:
         return reverse('blog:post_detail', kwargs={'pk': self.pk})
 
     def __str__(self) -> str:
-        return self.title
+        return (
+            f"""
+            {self.pub_date} | {self.author} - "{self.title[:25]}"
+            {self.text[:25]}
+            """
+        )
 
 
 class Comment(PublishedModel):
@@ -143,7 +140,7 @@ class Comment(PublishedModel):
     class Meta:
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
-        ordering = ['created_at']
+        ordering = ('created_at',)
 
     def __str__(self) -> str:
-        return self.text
+        return f"{self.author} - {self.text[:50]}"
