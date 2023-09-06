@@ -25,6 +25,7 @@ class PublishedModel(models.Model):
 
 
 class Location(PublishedModel):
+    """Модель локации для публикаций."""
     name = models.CharField(
         max_length=256,
         verbose_name='Название места',
@@ -39,6 +40,7 @@ class Location(PublishedModel):
 
 
 class Category(PublishedModel):
+    """Модель категории для публикаций."""
     title = models.CharField(
         max_length=256,
         verbose_name='Заголовок',
@@ -60,10 +62,11 @@ class Category(PublishedModel):
         verbose_name_plural = 'Категории'
 
     def __str__(self) -> str:
-        return f"{self.title[:25]} - {self.description[:50]}"
+        return f'"{self.title[:25]}" - {self.description[:50]}...'
 
 
 class Post(PublishedModel):
+    """Модель публикации."""
     title = models.CharField(
         max_length=256,
         verbose_name='Заголовок',
@@ -116,14 +119,14 @@ class Post(PublishedModel):
     def __str__(self) -> str:
         return (
             f"""
-            {self.pub_date} | {self.author} - "{self.title[:25]}"
-            {self.text[:25]}
+            {self.pub_date:%Y.%m.%d %H:%M} | {self.author}
+            : "{self.title[:25]}" {self.text[:50]}
             """
         )
 
 
 class Comment(PublishedModel):
-    """Модель для комментариев."""
+    """Модель комментария для публикации."""
     text = models.TextField(
         verbose_name='Текст комментария',
     )
@@ -143,4 +146,4 @@ class Comment(PublishedModel):
         ordering = ('created_at',)
 
     def __str__(self) -> str:
-        return f"{self.author} - {self.text[:50]}"
+        return f'{self.author}: {self.text[:50]}'

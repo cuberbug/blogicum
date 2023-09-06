@@ -48,6 +48,17 @@ class EditContentMixin(LoginRequiredMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
+class ValidationMixin:
+    """
+    Валидидатор формы.
+    Устанавливает пользователя в качестве автора.
+    """
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+
 class RedirectionPostMixin:
     """После выполнения перенаправит на страницу поста."""
 
@@ -81,6 +92,16 @@ class PostFormMixin(PostMixin):
 class PostListMixin(PostMixin):
     """Миксин для страниц со списком постов и пагинацией."""
     paginate_by = PAGINATE_COUNT
+
+
+class PostCreateMixin:
+    """Базовый миксин для создания и изменения постов."""
+    template_name = 'blog/create.html'
+
+
+class PostIdCreateMixin(PostCreateMixin):
+    """Расширенный миксин для создания и изменения постов."""
+    pk_url_kwarg = 'post_id'
 
 
 class PostListView(PostListMixin, ListView):
@@ -150,41 +171,35 @@ class CategoryListView(PostListMixin, ListView):
 class PostCreateView(
     LoginRequiredMixin,
     PostFormMixin,
+    PostCreateMixin,
+    ValidationMixin,
     RedirectionProfileMixin,
     CreateView,
 ):
     """CBV страница создания поста."""
-    template_name = 'blog/create.html'
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
+    pass
 
 
 class PostUpdateView(
     EditContentMixin,
     PostFormMixin,
+    PostIdCreateMixin,
+    ValidationMixin,
     RedirectionPostMixin,
     UpdateView,
 ):
     """CBV страница редактирования поста."""
-    template_name = 'blog/create.html'
-    pk_url_kwarg = 'post_id'
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
+    pass
 
 
 class PostDeleteView(
     EditContentMixin,
     PostMixin,
+    PostIdCreateMixin,
     RedirectionProfileMixin,
     DeleteView,
 ):
     """CBV страница удаления поста."""
-    template_name = 'blog/create.html'
-    pk_url_kwarg = 'post_id'
 
     def get_context_data(self, **kwargs) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)

@@ -13,7 +13,6 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = (
         'title',
         'description',
-        'slug',
         'is_published',
     )
     list_editable = ('is_published',)
