@@ -19,13 +19,19 @@
     * Windows
     ```shell
     python -m venv venv
+    ```
+    ```shell
     source venv/Scripts/activate
     ```
+
     * Linux/macOS
     ```shell
     python3 -m venv venv
+    ```
+    ```shell
     source venv/bin/activate
     ```
+
 
 * Обновить PIP
 
@@ -43,8 +49,11 @@
 
     ```shell
     python manage.py makemigrations
+    ```
+    ```shell
     python manage.py migrate
     ```
+
 
 * Запустить проект:
 
