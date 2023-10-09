@@ -117,21 +117,21 @@ class PostDetailView(PostMixin, DetailView):
     template_name = 'blog/detail.html'
     pk_url_kwarg = 'post_id'
 
-    def dispatch(self, request, *args, **kwargs) -> HttpResponse:
-        """
-        Условия фильтрации, если пользователь не является автором поста:
-        - пост разрешён к публикации;
-        - категория разрешена к публикации;
-        - текущее время больше времени публикации.
-        """
-        self.object = self.get_object()
-        if self.object.author != self.request.user and (
-            self.object.is_published is False
-            or self.object.category.is_published is False
-            or self.object.pub_date > timezone.now()
-        ):
-            raise Http404
-        return super().dispatch(request, *args, **kwargs)
+    # def dispatch(self, request, *args, **kwargs) -> HttpResponse:
+    #     """
+    #     Условия фильтрации, если пользователь не является автором поста:
+    #     - пост разрешён к публикации;
+    #     - категория разрешена к публикации;
+    #     - текущее время больше времени публикации.
+    #     """
+    #     self.object = self.get_object()
+    #     if self.object.author != self.request.user and (
+    #         self.object.is_published is False
+    #         or self.object.category.is_published is False
+    #         or self.object.pub_date > timezone.now()
+    #     ):
+    #         raise Http404
+    #     return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Any]:
         return super().get_queryset().select_related(
@@ -139,6 +139,22 @@ class PostDetailView(PostMixin, DetailView):
             'location',
             'category',
         )
+
+    def get_object(self, queryset=None):
+        """
+        Условия фильтрации, если пользователь не является автором поста:
+        - пост разрешён к публикации;
+        - категория разрешена к публикации;
+        - текущее время больше времени публикации.
+        """
+        post = super().get_object(queryset)
+        if post.author != self.request.user and (
+            post.is_published is False
+            or post.category.is_published is False
+            or post.pub_date > timezone.now()
+        ):
+            raise Http404
+        return post
 
     def get_context_data(self, **kwargs) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
